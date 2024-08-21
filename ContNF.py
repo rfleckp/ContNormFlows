@@ -720,13 +720,6 @@ class UNet(nn.Module):
         return h
 
 
-if __name__ == '__main__':
-
-    model = UNet()
-    
-    model(1, torch.randn((1,1,28,28)))
-   
-
 
 # In[11]:
 
@@ -1616,6 +1609,8 @@ def train_mnist_cfm(n_epochs, learning_rate=1e-3, seed=22, sigma=0):
     epochs, losses, train_time = [], [], []
     start = time.time()
 
+    print('training mnist cfm')
+
     model.train()
 
     for epoch in range(n_epochs):
@@ -1634,6 +1629,11 @@ def train_mnist_cfm(n_epochs, learning_rate=1e-3, seed=22, sigma=0):
 
             epoch_loss += loss
             num += 1
+
+            del x0, t, xt, ut, vt, loss
+
+            if i == 5:
+              break
         
         torch.save(model.state_dict(), os.path.join(path + "/models", f"{epoch}_model.pt"))
         print(f"\nloss: {epoch_loss/num}\n")
@@ -1643,8 +1643,12 @@ def train_mnist_cfm(n_epochs, learning_rate=1e-3, seed=22, sigma=0):
         epochs.append(epoch)
         losses.append(epoch_loss/num)
         train_time.append(elapsed_time)
+
+    
         
     print("finished training\n")
+
+    del model, optimizer, FM, progress_bar
 
     return path, epochs, losses, train_time
 
@@ -1921,28 +1925,6 @@ def plot_toy_flow(model_path: str, seed: int=3):
 
     plt.savefig(os.path.join(directory, f'{dataset}_flow'))
 
-
-# In[41]:
-
-
-plot_toy_flow("moons/node/models/18000_model.pt")
-
-
-# In[43]:
-
-
-toy_density_estimation1("moons/cfm/models/20000_model.pt")
-
-
-# In[54]:
-
-
-toy_density_estimation2("moons/node/models/18000_model.pt")
-
-
-# In[29]:
-
-
 #MNIST PLOTS
 
 def generate_grid(model_path: str, seed: int=4):
@@ -1997,65 +1979,3 @@ def plot_mnist_flow(model_path: str, seed: int=4):
 
     plt.tight_layout()
     plt.savefig(os.path.join(directory, f'{dataset}_flow'))
-
-
-# In[30]:
-
-
-plot_mnist_flow('mnist/cfm/models/3_model.pt')
-
-
-# In[31]:
-
-
-generate_grid('mnist/cfm/models/3_model.pt')
-
-
-# In[32]:
-
-
-"""Playground
-
-toy = torch.randint(low=0, high=10, size=(3,2)).to(torch.float32)
-mnist = torch.randint(low=0, high=10, size=(3,1,28,28)).to(torch.float32)
-
-t=torch.linspace(0, 1, 10).type(torch.float32)
-
-NF_toy = NODE(MLP())
-NF_mnist = NODE(UNet())
-
-traj_toy = NF_toy(toy, traj=True, t=t)
-traj_mnist = NF_mnist(mnist, traj=True, t=t)
-"""
-
-
-# In[33]:
-
-
-"""                          SCRIPTS                      """
-
-
-# In[34]:
-
-
-#evaluate_models('moons/rnode/models')
-
-
-# In[35]:
-
-
-#train_model(dataset='moons', training='node', odeint_method='rk4')
-
-
-# In[36]:
-
-
-"""datasets: ['moons', 'gaussians', 'circles', 'mnist']"""
-
-#script to train with all training methods
-import gc
-
-train_TOY = False
-train_MNIST = False
-
-train_model('mnist', "cfm",  n_epochs=10)
