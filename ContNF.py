@@ -1405,7 +1405,19 @@ def train_toy_rnode(n_batches, batch_size, target='moons', learning_rate=1e-3, s
 
 
 # In[17]:
+import tracemalloc
+import psutil
+import os
+import gc
+import pprint
+import sys
+import objgraph
+import psutil
 
+def print_use():
+    pid = os.getpid()
+    process = psutil.Process(pid)
+    print(process.memory_info().rss / (1024**2))
 
 def train_toy_cfm(n_batches, batch_size, target='moons', learning_rate=1e-3, seed=22, sigma=0):
 
@@ -1420,13 +1432,15 @@ def train_toy_cfm(n_batches, batch_size, target='moons', learning_rate=1e-3, see
     FM = ExactOptimalTransportConditionalFlowMatcher(sigma=sigma)
     model.train()
 
-    batch_save = int(n_batches/10)
+    batch_save = int(n_batches/1)
     batch_loss = 0
     start = time.time()
     path = target + "/cfm"
     os.makedirs(path + "/models", exist_ok=True)
 
     batches, losses, train_time = [], [], []
+
+    tracemalloc.start()
 
     for i in tqdm(range(1, n_batches+1), desc="Training Batches"):
         optimizer.zero_grad()
@@ -1440,6 +1454,8 @@ def train_toy_cfm(n_batches, batch_size, target='moons', learning_rate=1e-3, see
 
         batch_loss += loss
 
+        del x0, x1, t, xt, ut, loss
+
         if i%batch_save == 0:
             batch_loss = batch_loss/batch_save
             elapsed_time = time.time() - start
@@ -1451,11 +1467,71 @@ def train_toy_cfm(n_batches, batch_size, target='moons', learning_rate=1e-3, see
             torch.save(model.state_dict(), os.path.join(path + "/models", f"{i}_model.pt"))
             print(f"\nbatch {i}, Loss: {batch_loss}\n")
             batch_loss = 0
+        
+        print(f'Snapshot at the end of Epoch {i}')
+        print_use()
 
+
+    """
+    gc.collect()
+
+    # Open a file in write mode to save the output
+    with open("garbage_objects.txt", "w") as file:
+        # Iterate over the objects found by the garbage collector
+        for obj in gc.garbage:
+            file.write(str(obj) + "\n")
+
+        for obj in gc.get_objects():
+            if isinstance(obj, torch.Tensor):
+                a = obj
+                file.write(f"Tensor: {obj}, ref count: {sys.getrefcount(obj)}\n")
+
+    objgraph.show_refs(a, filename='ref-graph.png')
+
+    gc_stats = gc.get_stats()
+
+    # Get uncollectable objects
+    uncollectable_objects = gc.garbage
+
+    # Save the stats and uncollectable objects to a file
+    with open("gc_stats_and_uncollectable.txt", "w") as file:
+        # Save the garbage collector stats
+        file.write("Garbage Collector Stats:\n")
+        for idx, stat in enumerate(gc_stats):
+            file.write(f"Generation {idx}: {pprint.pformat(stat)}\n\n")
+        
+        # Save the uncollectable objects
+        file.write("Uncollectable Objects:\n")
+        for obj in uncollectable_objects:
+            try:
+                file.write(pprint.pformat(obj) + "\n\n")
+            except Exception as e:
+                file.write(f"Could not write object: {e}\n\n")
+
+"""
+
+    """        
+    all_objects = gc.get_objects()
+    with open("all_gc_objects.txt", "w") as file:
+        for obj in all_objects:
+            try:
+                # Write a string representation of each object to the file
+                file.write(pprint.pformat(obj) + "\n\n")
+            except Exception as e:
+                # Handle any objects that can't be converted to a string
+                file.write(f"Could not write object: {e}\n\n")
+    """
     print("finished training\n")
 
     return path, batches, losses, train_time
 
+tracemalloc.start()
+train_toy_cfm(1000, 256)
+snapshot = tracemalloc.take_snapshot()
+top_stats = snapshot.statistics('lineno')
+
+print('\n Final Snapshot\n')
+print_use()
 
 # In[18]:
 
