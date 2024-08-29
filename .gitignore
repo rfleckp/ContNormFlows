@@ -1,6 +1,5 @@
-data
-moonsold
 __pycache__
 .venv
 .vscode
-.gitignore
+data
+moonsold
