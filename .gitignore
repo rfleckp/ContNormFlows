@@ -3,4 +3,10 @@ __pycache__
 .vscode
 .DS_Store
 data
+mnist
+moons
+spirals
+normal
+gaussians
 moonsold
+checkerboard
